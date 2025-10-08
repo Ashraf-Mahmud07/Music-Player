@@ -1,173 +1,200 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
-import { FlatList, Image, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { musicStyles } from '@/components/styles/musicStyles';
+import { Ionicons } from '@expo/vector-icons';
+import Slider from '@react-native-community/slider';
+import { Audio, AVPlaybackStatus } from 'expo-av';
+import { useNavigation } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+    Image,
+    StyleProp,
+    Text,
+    TouchableOpacity,
+    View,
+    ViewStyle
+} from 'react-native';
 
-const recentlyPlayed = [
-    { id: '1', title: 'The triangle', image: require('@/assets/images/music-image.avif') },
-    { id: '2', title: 'Dune Of Visa', image: require('@/assets/images/music-image.avif') },
-    { id: '3', title: 'RiskItAll', image: require('@/assets/images/music-image.avif') },
-];
+export default function MusicPlayer() {
+    const [sound, setSound] = useState<Audio.Sound | null>(null);
+    const [isPlaying, setIsPlaying] = useState<boolean>(false);
+    const [position, setPosition] = useState<number>(0);
+    const [duration, setDuration] = useState<number>(1);
 
-const recommend = [
-    { id: '1', title: 'Take care of you', artist: 'Admina Thembi', streams: '114k', image: require('@/assets/images/music-image.avif') },
-    { id: '2', title: 'The stranger inside you', artist: 'Jeane Lebras', streams: '60.5k', image: require('@/assets/images/music-image.avif') },
-    { id: '3', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.avif') },
-];
+    const soundRef = useRef<Audio.Sound | null>(null);
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const navigation = useNavigation();
 
-export default function HomeScreen() {
+
+    const playlist = [
+        {
+            title: "Jo Tu Nahi To",
+            artist: "Arijit Singh",
+            file: require('@/assets/songs/JoTuNahiToAisaMain.mp3'),
+            image: require('@/assets/images/music-image.jpg'),
+        },
+        {
+            title: "Moha Jadu",
+            artist: " Habib Wahid",
+            file: require('@/assets/songs/Moha_Jadu.mp3'),
+            image: require('@/assets/images/music-image.jpg'),
+        },
+    ];
+
+
+    useEffect(() => {
+        loadAudio(currentIndex);
+        return () => {
+            if (soundRef.current) {
+                soundRef.current.unloadAsync();
+            }
+        };
+    }, []);
+
+
+    const loadAudio = async (index: number) => {
+        try {
+            if (soundRef.current) {
+                await soundRef.current.unloadAsync();
+            }
+
+            const { sound } = await Audio.Sound.createAsync(
+                playlist[index].file,
+                { shouldPlay: true },
+                onPlaybackStatusUpdate
+            );
+            soundRef.current = sound;
+            setSound(sound);
+            setIsPlaying(true);
+        } catch (error) {
+            console.error("Error loading audio", error);
+        }
+    };
+
+    const playNext = () => {
+        const nextIndex = (currentIndex + 1) % playlist.length;
+        setCurrentIndex(nextIndex);
+        loadAudio(nextIndex);
+    };
+
+    const playPrevious = () => {
+        const prevIndex = (currentIndex - 1 + playlist.length) % playlist.length;
+        setCurrentIndex(prevIndex);
+        loadAudio(prevIndex);
+    };
+
+    const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
+        if (!status.isLoaded) return;
+        const positionMillis = status.positionMillis ?? 0;
+        const durationMillis = status.durationMillis ?? 1;
+
+        setPosition(positionMillis);
+        setDuration(durationMillis);
+        setIsPlaying(status.isPlaying ?? false);
+    };
+
+    const togglePlayPause = async () => {
+        if (!soundRef.current) return;
+
+        if (isPlaying) {
+            await soundRef.current.pauseAsync();
+        } else {
+            await soundRef.current.playAsync();
+        }
+    };
+
+    const formatDecimalTime = (millis: number) => {
+        const totalSeconds = Math.floor(millis / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+
+        const decimalSeconds = Math.floor((seconds * 60) / 60)
+            .toString()
+            .padStart(2, '0');
+        return `${minutes}.${decimalSeconds}`;
+    };
+
+
+    const seekAudio = async (value: number) => {
+        if (soundRef.current) {
+            const seekPosition = Math.floor(value * duration);
+            await soundRef.current.setPositionAsync(seekPosition);
+        }
+    };
+
+
+    useEffect(() => {
+        const interval = setInterval(async () => {
+            if (soundRef.current) {
+                const status = await soundRef.current.getStatusAsync();
+                if (status.isLoaded) {
+                    setPosition(status.positionMillis);
+                    setDuration(status.durationMillis ?? 1);
+                    setIsPlaying(status.isPlaying ?? false);
+                }
+            }
+        }, 100);
+
+        return () => clearInterval(interval);
+    }, []);
+
+
     return (
-        <LinearGradient colors={['#0A043C', '#111132']} style={styles.container}>
-            <ScrollView showsVerticalScrollIndicator={false}>
+        <View style={musicStyles.container}>
+            {/* Header */}
+            <View style={musicStyles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <Ionicons name="arrow-back" size={24} color="white" />
+                </TouchableOpacity>
+                <Text style={musicStyles.title}>{playlist[currentIndex].title} by {playlist[currentIndex].artist}</Text>
+                <Ionicons name="heart-outline" size={24} color="white" />
+            </View>
 
-                {/* Header */}
-                <View style={styles.header}>
-                    <View style={styles.profile}>
-                        <Image
-                            source={require('@/assets/images/music-image.avif')}
-                            style={styles.avatar}
+            {/* Album Art */}
+            <Image
+                source={playlist[currentIndex].image}
+                style={musicStyles.albumArt}
+            />
+
+            {/* Song Info */}
+            <Text style={musicStyles.songTitle}>{playlist[currentIndex].title}</Text>
+            <Text style={musicStyles.artist}>{playlist[currentIndex].artist}</Text>
+
+            {/* Slider */}
+            <Slider
+                style={musicStyles.slider as StyleProp<ViewStyle>}
+                minimumValue={0}
+                maximumValue={1}
+                value={duration ? position / duration : 0}
+                minimumTrackTintColor="#ffffff"
+                maximumTrackTintColor="#888"
+                onSlidingComplete={seekAudio}
+            />
+
+            {/* Time display */}
+            <View style={musicStyles.timeRow}>
+                <Text style={musicStyles.time}>{formatDecimalTime(position)}</Text>
+                <Text style={musicStyles.time}>{formatDecimalTime(duration)}</Text>
+            </View>
+
+            {/* Controls */}
+            <View style={musicStyles.controls}>
+                <Ionicons name="shuffle" size={24} color="white" />
+                <TouchableOpacity onPress={playPrevious}>
+                    <Ionicons name="play-skip-back" size={32} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={togglePlayPause}>
+                    <View style={musicStyles.playButton}>
+                        <Ionicons
+                            name={isPlaying ? 'pause' : 'play'}
+                            size={32}
+                            color="white"
                         />
-                        <View>
-                            <Text style={styles.name}>Sarwar Jahan</Text>
-                            <Text style={styles.role}>Gold Member</Text>
-                        </View>
                     </View>
-                    <Icon name="notifications-outline" size={24} color="#9BA3AF" />
-                </View>
-
-                {/* Search Bar */}
-                <View style={styles.searchBar}>
-                    <Icon name="search-outline" size={20} color="#9BA3AF" />
-                    <TextInput
-                        placeholder="Search Music"
-                        placeholderTextColor="#9BA3AF"
-                        style={styles.searchInput}
-                    />
-                </View>
-
-                {/* Recently Played */}
-                <Text style={styles.sectionTitle}>Recently Played</Text>
-                <FlatList
-                    data={recentlyPlayed}
-                    horizontal
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => (
-                        <View style={styles.card}>
-                            <Image source={item.image} style={styles.cardImage} />
-                            <Text style={styles.cardTitle}>{item.title}</Text>
-                        </View>
-                    )}
-                    showsHorizontalScrollIndicator={false}
-                />
-
-                {/* Recommended */}
-                <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Recommend for you</Text>
-                {recommend.map((item) => (
-                    <View key={item.id} style={styles.recommendCard}>
-                        <Image source={item.image} style={styles.recommendImage} />
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.songTitle}>{item.title}</Text>
-                            <Text style={styles.artist}>{item.artist}</Text>
-                            <Text style={styles.streams}>{item.streams} / steams</Text>
-                        </View>
-                    </View>
-                ))}
-
-            </ScrollView>
-        </LinearGradient>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={playNext}>
+                    <Ionicons name="play-skip-forward" size={32} color="white" />
+                </TouchableOpacity>
+                <Ionicons name="repeat" size={24} color="white" />
+            </View>
+        </View>
     );
 }
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        paddingHorizontal: 20,
-        paddingTop: 50,
-    },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    profile: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-    },
-    avatar: {
-        width: 45,
-        height: 45,
-        borderRadius: 25,
-    },
-    name: {
-        color: '#fff',
-        fontWeight: '600',
-        fontSize: 16,
-    },
-    role: {
-        color: '#9BA3AF',
-        fontSize: 12,
-    },
-    searchBar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#1A1B4B',
-        borderRadius: 15,
-        paddingHorizontal: 15,
-        paddingVertical: 8,
-        marginTop: 20,
-    },
-    searchInput: {
-        marginLeft: 10,
-        color: '#fff',
-        flex: 1,
-    },
-    sectionTitle: {
-        color: '#fff',
-        fontWeight: '700',
-        fontSize: 18,
-        marginTop: 25,
-        marginBottom: 10,
-    },
-    card: {
-        marginRight: 15,
-        alignItems: 'center',
-    },
-    cardImage: {
-        width: 120,
-        height: 120,
-        borderRadius: 15,
-    },
-    cardTitle: {
-        color: '#fff',
-        marginTop: 8,
-        fontSize: 13,
-    },
-    recommendCard: {
-        flexDirection: 'row',
-        backgroundColor: '#1A1B4B',
-        borderRadius: 15,
-        padding: 10,
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    recommendImage: {
-        width: 70,
-        height: 70,
-        borderRadius: 12,
-        marginRight: 12,
-    },
-    songTitle: {
-        color: '#fff',
-        fontSize: 15,
-        fontWeight: '600',
-    },
-    artist: {
-        color: '#9BA3AF',
-        fontSize: 13,
-    },
-    streams: {
-        color: '#6D6D8E',
-        fontSize: 12,
-    },
-});

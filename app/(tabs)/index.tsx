@@ -5,22 +5,22 @@ import { FlatList, Image, ScrollView, Text, TextInput, View } from 'react-native
 import Icon from 'react-native-vector-icons/Ionicons';
 
 const recentlyPlayed = [
-    { id: '1', title: 'The triangle', image: require('@/assets/images/music-image.avif') },
-    { id: '2', title: 'Dune Of Visa', image: require('@/assets/images/music-image.avif') },
-    { id: '3', title: 'RiskItAll', image: require('@/assets/images/music-image.avif') },
-    { id: '4', title: 'RiskItAll', image: require('@/assets/images/music-image.avif') },
-    { id: '5', title: 'RiskItAll', image: require('@/assets/images/music-image.avif') },
+    { id: '1', title: 'The triangle', image: require('@/assets/images/music-image.jpg') },
+    { id: '2', title: 'Dune Of Visa', image: require('@/assets/images/music-image.jpg') },
+    { id: '3', title: 'RiskItAll', image: require('@/assets/images/music-image.jpg') },
+    { id: '4', title: 'RiskItAll', image: require('@/assets/images/music-image.jpg') },
+    { id: '5', title: 'RiskItAll', image: require('@/assets/images/music-image.jpg') },
 ];
 
 const recommend = [
-    { id: '1', title: 'Take care of you', artist: 'Admina Thembi', streams: '114k', image: require('@/assets/images/music-image.avif') },
-    { id: '2', title: 'The stranger inside you', artist: 'Jeane Lebras', streams: '60.5k', image: require('@/assets/images/music-image.avif') },
-    { id: '3', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.avif') },
-    { id: '4', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.avif') },
-    { id: '5', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.avif') },
-    { id: '6', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.avif') },
-    { id: '7', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.avif') },
-    { id: '8', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.avif') },
+    { id: '1', title: 'Take care of you', artist: 'Admina Thembi', streams: '114k', image: require('@/assets/images/music-image.jpg') },
+    { id: '2', title: 'The stranger inside you', artist: 'Jeane Lebras', streams: '60.5k', image: require('@/assets/images/music-image.jpg') },
+    { id: '3', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.jpg') },
+    { id: '4', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.jpg') },
+    { id: '5', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.jpg') },
+    { id: '6', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.jpg') },
+    { id: '7', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.jpg') },
+    { id: '8', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.jpg') },
 ];
 
 export default function HomeScreen() {
