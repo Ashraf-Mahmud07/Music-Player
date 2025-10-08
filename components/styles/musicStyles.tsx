@@ -43,12 +43,14 @@ export const musicStyles = StyleSheet.create({
     timeRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingHorizontal: 4,
-        marginBottom: 20,
+        paddingHorizontal: 10,
+        marginBottom: 15,
+        width: '100%',
     },
     time: {
         color: '#ccc',
         fontSize: 12,
+        width: 24,
     },
     controls: {
         flexDirection: 'row',

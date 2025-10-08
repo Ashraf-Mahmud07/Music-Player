@@ -1,3 +1,4 @@
+import MusicWaveLoader from '@/components/common/MusicWaveLoader';
 import { musicStyles } from '@/components/styles/musicStyles';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
@@ -18,54 +19,75 @@ export default function MusicPlayer() {
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
     const [position, setPosition] = useState<number>(0);
     const [duration, setDuration] = useState<number>(1);
+    const [playlist, setPlaylist] = useState<any[]>([]);
+    const [currentIndex, setCurrentIndex] = useState<number>(0);
+    const [loading, setLoading] = useState<boolean>(true);
 
     const soundRef = useRef<Audio.Sound | null>(null);
-    const [currentIndex, setCurrentIndex] = useState(0);
     const navigation = useNavigation();
 
-
-    const playlist = [
-        {
-            title: "Jo Tu Nahi To",
-            artist: "Arijit Singh",
-            file: require('@/assets/songs/JoTuNahiToAisaMain.mp3'),
-            image: require('@/assets/images/music-image.jpg'),
-        },
-        {
-            title: "Moha Jadu",
-            artist: " Habib Wahid",
-            file: require('@/assets/songs/Moha_Jadu.mp3'),
-            image: require('@/assets/images/music-image.jpg'),
-        },
-    ];
-
+    // 🎧 Fetch Deezer API (top 30 songs for an artist or query)
+    const fetchDeezerSongs = async (query: string = "Coke Studio") => {
+        try {
+            setLoading(true);
+            const res = await fetch(`https://api.deezer.com/search?q=${query}`);
+            const data = await res.json();
+            // Only 30 songs
+            const songs = data.data.slice(0, 30);
+            setPlaylist(songs);
+            setLoading(false);
+            if (songs.length > 0) loadAudio(0, songs);
+        } catch (err) {
+            console.error("Error fetching songs:", err);
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        loadAudio(currentIndex);
+        fetchDeezerSongs();
         return () => {
-            if (soundRef.current) {
-                soundRef.current.unloadAsync();
-            }
+            if (soundRef.current) soundRef.current.unloadAsync();
         };
     }, []);
 
-
-    const loadAudio = async (index: number) => {
+    const loadAudio = async (index: number, list = playlist) => {
         try {
             if (soundRef.current) {
                 await soundRef.current.unloadAsync();
             }
 
+            const previewUrl = list[index]?.preview;
+            if (!previewUrl) return;
+
             const { sound } = await Audio.Sound.createAsync(
-                playlist[index].file,
-                { shouldPlay: true },
+                { uri: previewUrl },
+                { shouldPlay: false },
                 onPlaybackStatusUpdate
             );
+
             soundRef.current = sound;
             setSound(sound);
             setIsPlaying(true);
         } catch (error) {
             console.error("Error loading audio", error);
+        }
+    };
+
+    const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
+        if (!status.isLoaded) return;
+        const positionMillis = status.positionMillis ?? 0;
+        const durationMillis = status.durationMillis ?? 1;
+        setPosition(positionMillis);
+        setDuration(durationMillis);
+        setIsPlaying(status.isPlaying ?? false);
+    };
+
+    const togglePlayPause = async () => {
+        if (!soundRef.current) return;
+        if (isPlaying) {
+            await soundRef.current.pauseAsync();
+        } else {
+            await soundRef.current.playAsync();
         }
     };
 
@@ -81,25 +103,6 @@ export default function MusicPlayer() {
         loadAudio(prevIndex);
     };
 
-    const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
-        if (!status.isLoaded) return;
-        const positionMillis = status.positionMillis ?? 0;
-        const durationMillis = status.durationMillis ?? 1;
-
-        setPosition(positionMillis);
-        setDuration(durationMillis);
-        setIsPlaying(status.isPlaying ?? false);
-    };
-
-    const togglePlayPause = async () => {
-        if (!soundRef.current) return;
-
-        if (isPlaying) {
-            await soundRef.current.pauseAsync();
-        } else {
-            await soundRef.current.playAsync();
-        }
-    };
 
     const formatDecimalTime = (millis: number) => {
         const totalSeconds = Math.floor(millis / 1000);
@@ -112,14 +115,12 @@ export default function MusicPlayer() {
         return `${minutes}.${decimalSeconds}`;
     };
 
-
     const seekAudio = async (value: number) => {
         if (soundRef.current) {
             const seekPosition = Math.floor(value * duration);
             await soundRef.current.setPositionAsync(seekPosition);
         }
     };
-
 
     useEffect(() => {
         const interval = setInterval(async () => {
@@ -131,11 +132,21 @@ export default function MusicPlayer() {
                     setIsPlaying(status.isPlaying ?? false);
                 }
             }
-        }, 100);
+        }, 500);
 
         return () => clearInterval(interval);
     }, []);
 
+    if (loading) {
+        return (
+
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' }}>
+                <MusicWaveLoader />
+            </View>
+        );
+    }
+
+    const currentSong = playlist[currentIndex];
 
     return (
         <View style={musicStyles.container}>
@@ -144,19 +155,21 @@ export default function MusicPlayer() {
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <Ionicons name="arrow-back" size={24} color="white" />
                 </TouchableOpacity>
-                <Text style={musicStyles.title}>{playlist[currentIndex].title} by {playlist[currentIndex].artist}</Text>
+                <Text style={musicStyles.title}>
+                    {currentSong?.title_short || "Music Player"}
+                </Text>
                 <Ionicons name="heart-outline" size={24} color="white" />
             </View>
 
             {/* Album Art */}
             <Image
-                source={playlist[currentIndex].image}
+                source={{ uri: currentSong?.album?.cover_big }}
                 style={musicStyles.albumArt}
             />
 
             {/* Song Info */}
-            <Text style={musicStyles.songTitle}>{playlist[currentIndex].title}</Text>
-            <Text style={musicStyles.artist}>{playlist[currentIndex].artist}</Text>
+            <Text style={musicStyles.songTitle}>{currentSong?.title}</Text>
+            <Text style={musicStyles.artist}>{currentSong?.artist?.name}</Text>
 
             {/* Slider */}
             <Slider
@@ -169,7 +182,7 @@ export default function MusicPlayer() {
                 onSlidingComplete={seekAudio}
             />
 
-            {/* Time display */}
+            {/* Time Display */}
             <View style={musicStyles.timeRow}>
                 <Text style={musicStyles.time}>{formatDecimalTime(position)}</Text>
                 <Text style={musicStyles.time}>{formatDecimalTime(duration)}</Text>
