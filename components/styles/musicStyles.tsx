@@ -11,11 +11,15 @@ export const musicStyles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        gap: 10,
         marginBottom: 30,
     },
     title: {
         color: 'white',
         fontSize: 18,
+        flexShrink: 1,
+        flexWrap: 'wrap',
+        overflow: 'hidden',
     },
     albumArt: {
         marginTop: 40,
@@ -26,9 +30,12 @@ export const musicStyles = StyleSheet.create({
         resizeMode: 'cover',
     },
     songTitle: {
-        fontSize: 22,
+        fontSize: 18,
         color: 'white',
         textAlign: 'center',
+        flexShrink: 1,
+        flexWrap: 'wrap',
+        overflow: 'hidden',
     },
     artist: {
         fontSize: 16,
@@ -50,7 +57,7 @@ export const musicStyles = StyleSheet.create({
     time: {
         color: '#ccc',
         fontSize: 12,
-        width: 24,
+        width: 36,
     },
     controls: {
         flexDirection: 'row',

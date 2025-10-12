@@ -1,40 +1,83 @@
 import { homeStyles } from '@/components/styles/homeStyles';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
-import { FlatList, Image, ScrollView, Text, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    FlatList,
+    Image,
+    RefreshControl,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-const recentlyPlayed = [
-    { id: '1', title: 'The triangle', image: require('@/assets/images/music-image.jpg') },
-    { id: '2', title: 'Dune Of Visa', image: require('@/assets/images/music-image.jpg') },
-    { id: '3', title: 'RiskItAll', image: require('@/assets/images/music-image.jpg') },
-    { id: '4', title: 'RiskItAll', image: require('@/assets/images/music-image.jpg') },
-    { id: '5', title: 'RiskItAll', image: require('@/assets/images/music-image.jpg') },
-];
-
-const recommend = [
-    { id: '1', title: 'Take care of you', artist: 'Admina Thembi', streams: '114k', image: require('@/assets/images/music-image.jpg') },
-    { id: '2', title: 'The stranger inside you', artist: 'Jeane Lebras', streams: '60.5k', image: require('@/assets/images/music-image.jpg') },
-    { id: '3', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.jpg') },
-    { id: '4', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.jpg') },
-    { id: '5', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.jpg') },
-    { id: '6', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.jpg') },
-    { id: '7', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.jpg') },
-    { id: '8', title: 'Edwall of beauty mind', artist: 'Jacob Givson', streams: '44.3k', image: require('@/assets/images/music-image.jpg') },
-];
-
 export default function HomeScreen() {
+    const [query, setQuery] = useState('');
+    const [musicData, setMusicData] = useState<any[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const router = useRouter();
+
+    // ✅ Fetch Deezer API (20 recommended songs)
+    const fetchDeezerData = async (searchText: string = 'Coke Studio') => {
+        setLoading(true);
+        try {
+            const res = await fetch(`https://api.deezer.com/search?q=${searchText}`);
+            const data = await res.json();
+            setMusicData(data.data.slice(0, 20)); // only 20 songs
+        } catch (error) {
+            console.error('Deezer API Error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ✅ Load default recommended songs on mount
+    useEffect(() => {
+        fetchDeezerData();
+    }, []);
+
+    // ✅ Pull-to-refresh
+    const onRefresh = useCallback(() => {
+        setRefreshing(true);
+        fetchDeezerData(query || 'Coke Studio').then(() => setRefreshing(false));
+    }, [query]);
+
+    // ✅ Search Deezer songs (debounced)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (query.length > 1) fetchDeezerData(query);
+            else if (query.length === 0) fetchDeezerData(); // restore default
+        }, 600);
+        return () => clearTimeout(timer);
+    }, [query]);
+
+    // ✅ Handle song click → navigate to MusicPlayer
+    const handleSongPress = (song: any) => {
+        router.push({
+            pathname: '/music',
+            params: {
+                song: JSON.stringify(song), // pass song data
+            },
+        });
+    };
+
     return (
         <LinearGradient colors={['#0A043C', '#111132']} style={homeStyles.container}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#00BFFF']} />
+                }
+            >
                 {/* Header */}
                 <View style={homeStyles.header}>
                     <View style={homeStyles.profile}>
-                        <Image
-                            source={require('@/assets/images/singer.jpg')}
-                            style={homeStyles.avatar}
-                        />
+                        <Image source={require('@/assets/images/singer.jpg')} style={homeStyles.avatar} />
                         <View>
                             <Text style={homeStyles.name}>Ashraf Mahmud</Text>
                             <Text style={homeStyles.role}>Diamond Member</Text>
@@ -50,37 +93,41 @@ export default function HomeScreen() {
                         placeholder="Search Music"
                         placeholderTextColor="#9BA3AF"
                         style={homeStyles.searchInput}
+                        value={query}
+                        onChangeText={setQuery}
                     />
                 </View>
 
-                {/* Recently Played */}
-                <Text style={homeStyles.sectionTitle}>Recently Played</Text>
-                <FlatList
-                    data={recentlyPlayed}
-                    horizontal
-                    keyExtractor={(item) => item.id}
-                    renderItem={({ item }) => (
-                        <View style={homeStyles.card}>
-                            <Image source={item.image} style={homeStyles.cardImage} />
-                            <Text style={homeStyles.cardTitle}>{item.title}</Text>
-                        </View>
-                    )}
-                    showsHorizontalScrollIndicator={false}
-                />
+                {/* Loader */}
+                {loading && (
+                    <ActivityIndicator size="large" color="#00BFFF" style={{ marginVertical: 20 }} />
+                )}
 
-                {/* Recommended */}
-                <Text style={[homeStyles.sectionTitle, { marginTop: 20 }]}>Recommend for you</Text>
-                {recommend.map((item) => (
-                    <View key={item.id} style={homeStyles.recommendCard}>
-                        <Image source={item.image} style={homeStyles.recommendImage} />
-                        <View style={{ flex: 1 }}>
-                            <Text style={homeStyles.songTitle}>{item.title}</Text>
-                            <Text style={homeStyles.artist}>{item.artist}</Text>
-                            <Text style={homeStyles.streams}>{item.streams} / steams</Text>
-                        </View>
-                    </View>
-                ))}
+                {/* Recommended / Search Results */}
+                {!loading && (
+                    <>
+                        <Text style={[homeStyles.sectionTitle, { marginTop: 10 }]}>
+                            {query ? 'Search Results' : 'Recommend for You'}
+                        </Text>
 
+                        <FlatList
+                            data={musicData}
+                            keyExtractor={(item) => item.id.toString()}
+                            renderItem={({ item }) => (
+                                <TouchableOpacity onPress={() => handleSongPress(item)} style={homeStyles.recommendCard}>
+                                    <Image source={{ uri: item.album.cover_medium }} style={homeStyles.recommendImage} />
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={homeStyles.songTitle} numberOfLines={1}>
+                                            {item.title}
+                                        </Text>
+                                        <Text style={homeStyles.artist}>{item.artist.name}</Text>
+                                        <Text style={homeStyles.streams}>{item.album.title}</Text>
+                                    </View>
+                                </TouchableOpacity>
+                            )}
+                        />
+                    </>
+                )}
             </ScrollView>
         </LinearGradient>
     );
