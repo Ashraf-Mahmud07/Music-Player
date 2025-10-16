@@ -16,6 +16,7 @@ async function tryInitTrackPlayer() {
     try {
       TrackPlayer.registerPlaybackService(() => require('./service'));
     } catch (e) {
+      // If registerPlaybackService isn't available on the installed version
       // ignore silently.
       // console.warn('registerPlaybackService not available', e);
     }
