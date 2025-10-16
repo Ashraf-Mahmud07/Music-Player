@@ -7,6 +7,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
+    AppState,
+    AppStateStatus,
     Image,
     RefreshControl,
     ScrollView,
@@ -26,12 +28,22 @@ export default function MusicPlayer() {
     const [refreshing, setRefreshing] = useState<boolean>(false);
 
     const params = useLocalSearchParams();
-    const passedSong = params?.song ? JSON.parse(params.song as string) : null;
 
     const soundRef = useRef<Audio.Sound | null>(null);
+    const finishRef = useRef<boolean>(false);
+    const playlistRef = useRef<any[]>([]);
+    const currentIndexRef = useRef<number>(0);
     const navigation = useNavigation();
 
-    // ✅ Fetch Deezer API (top 20 songs)
+    // Update refs when state changes
+    useEffect(() => {
+        playlistRef.current = playlist;
+    }, [playlist]);
+    useEffect(() => {
+        currentIndexRef.current = currentIndex;
+    }, [currentIndex]);
+
+    // Fetch Deezer API (top 20 songs)
     const fetchDeezerSongs = async (query: string = 'Coke Studio') => {
         try {
             setLoading(true);
@@ -49,24 +61,28 @@ export default function MusicPlayer() {
         }
     };
 
-    // ✅ Load audio and play
-    const loadAudio = async (index: number, list = playlist) => {
+    // Load audio and play
+    const loadAudio = async (index: number, list = playlistRef.current) => {
         try {
             if (soundRef.current) {
-                await soundRef.current.unloadAsync();
+                try {
+                    await soundRef.current.unloadAsync();
+                } catch (e) {
+                    // ignore unload errors
+                }
             }
 
             const previewUrl = list[index]?.preview;
             if (!previewUrl) return;
 
-            const { sound } = await Audio.Sound.createAsync(
+            const { sound: created } = await Audio.Sound.createAsync(
                 { uri: previewUrl },
                 { shouldPlay: true },
                 onPlaybackStatusUpdate
             );
 
-            soundRef.current = sound;
-            setSound(sound);
+            soundRef.current = created;
+            setSound(created);
             setIsPlaying(true);
             setCurrentIndex(index);
         } catch (error) {
@@ -74,17 +90,30 @@ export default function MusicPlayer() {
         }
     };
 
-    // ✅ Playback status updates
+    // Playback status updates
     const onPlaybackStatusUpdate = (status: AVPlaybackStatus) => {
         if (!status.isLoaded) return;
-        const positionMillis = status.positionMillis ?? 0;
-        const durationMillis = status.durationMillis ?? 1;
+        const positionMillis = (status as any).positionMillis ?? 0;
+        const durationMillis = (status as any).durationMillis ?? 1;
         setPosition(positionMillis);
         setDuration(durationMillis);
         setIsPlaying(status.isPlaying ?? false);
+
+        // If the track just finished playing, advance to the next track.
+        if ((status as any).didJustFinish && !finishRef.current) {
+            finishRef.current = true;
+            setTimeout(() => {
+                finishRef.current = false;
+                // use refs to avoid stale closure
+                const list = playlistRef.current;
+                if (!list || !list.length) return;
+                const nextIndex = (currentIndexRef.current + 1) % list.length;
+                loadAudio(nextIndex, list);
+            }, 100);
+        }
     };
 
-    // ✅ Play / Pause toggle
+    // Play / Pause toggle
     const togglePlayPause = async () => {
         if (!soundRef.current) return;
         if (isPlaying) {
@@ -94,20 +123,24 @@ export default function MusicPlayer() {
         }
     };
 
-    // ✅ Next / Previous control
+    // Next / Previous control
     const playNext = () => {
-        if (!playlist.length) return;
-        const nextIndex = (currentIndex + 1) % playlist.length;
-        loadAudio(nextIndex);
+        const list = playlistRef.current;
+        if (!list || !list.length) return;
+        const nextIndex = (currentIndexRef.current + 1) % list.length;
+        finishRef.current = false;
+        loadAudio(nextIndex, list);
     };
 
     const playPrevious = () => {
-        if (!playlist.length) return;
-        const prevIndex = (currentIndex - 1 + playlist.length) % playlist.length;
-        loadAudio(prevIndex);
+        const list = playlistRef.current;
+        if (!list || !list.length) return;
+        const prevIndex = (currentIndexRef.current - 1 + list.length) % list.length;
+        finishRef.current = false;
+        loadAudio(prevIndex, list);
     };
 
-    // ✅ Format time (MM:SS)
+    // Format time (MM:SS)
     const formatTime = (millis: number) => {
         const totalSeconds = Math.floor(millis / 1000);
         const minutes = Math.floor(totalSeconds / 60);
@@ -115,7 +148,7 @@ export default function MusicPlayer() {
         return `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
     };
 
-    // ✅ Seek audio
+    // Seek audio
     const seekAudio = async (value: number) => {
         if (soundRef.current) {
             const seekPosition = Math.floor(value * duration);
@@ -123,29 +156,12 @@ export default function MusicPlayer() {
         }
     };
 
-    // ✅ Refresh functionality
+    // Refresh functionality
     const onRefresh = async () => {
         setRefreshing(true);
         await fetchDeezerSongs();
         setRefreshing(false);
     };
-
-    // ✅ Initialize on mount
-    // useEffect(() => {
-    //     const init = async () => {
-    //         if (passedSong) {
-    //             setPlaylist([passedSong]);
-    //             await loadAudio(0, [passedSong]);
-    //         } else {
-    //             await fetchDeezerSongs();
-    //         }
-    //     };
-    //     init();
-
-    //     return () => {
-    //         if (soundRef.current) soundRef.current.unloadAsync();
-    //     };
-    // }, []);
 
     useEffect(() => {
         const loadPassedSong = async () => {
@@ -153,32 +169,109 @@ export default function MusicPlayer() {
                 try {
                     const newSong = JSON.parse(params.song as string);
                     setPlaylist([newSong]);
+                    playlistRef.current = [newSong];
                     setCurrentIndex(0);
+                    currentIndexRef.current = 0;
                     await loadAudio(0, [newSong]);
                     setLoading(false);
                 } catch (error) {
                     console.error('Error loading passed song:', error);
                 }
+            } else {
+                await fetchDeezerSongs();
             }
         };
 
         loadPassedSong();
     }, [params.song]);
 
-    // ✅ Auto update position every 500ms
+    // Auto update position every 500ms
     useEffect(() => {
         const interval = setInterval(async () => {
             if (soundRef.current) {
                 const status = await soundRef.current.getStatusAsync();
-                if (status.isLoaded) {
-                    setPosition(status.positionMillis);
-                    setDuration(status.durationMillis ?? 1);
+                    if (status.isLoaded) {
+                    setPosition((status as any).positionMillis);
+                    setDuration((status as any).durationMillis ?? 1);
                     setIsPlaying(status.isPlaying ?? false);
                 }
             }
         }, 500);
         return () => clearInterval(interval);
     }, []);
+        useEffect(() => {
+            let mounted = true;
+            const handleAppState = async (nextAppState: AppStateStatus) => {
+                try {
+                    const TrackPlayer: any = require('react-native-track-player');
+                    if (!TrackPlayer) return;
+
+                    if (nextAppState === 'background' || nextAppState === 'inactive') {
+                        if (soundRef.current && isPlaying) {
+                            const status = await soundRef.current.getStatusAsync();
+                            const positionMillis = (status as any).positionMillis ?? 0;
+                            const current = playlistRef.current[currentIndexRef.current];
+                            if (!current) return;
+
+                            const track = {
+                                id: current.id?.toString() || String(Date.now()),
+                                url: current.preview,
+                                title: current.title || current.title_short || 'Unknown',
+                                artist: current.artist?.name || '',
+                                artwork: current.album?.cover_big || undefined,
+                            };
+
+                            try {
+                                await TrackPlayer.reset();
+                                await TrackPlayer.add([track]);
+                                await TrackPlayer.play();
+                                try {
+                                    await TrackPlayer.seekTo(positionMillis / 1000);
+                                } catch (e) {
+                                    // ignore if seek not supported
+                                }
+                                try {
+                                    await soundRef.current.stopAsync();
+                                } catch (e) {
+                                    // ignore
+                                }
+                            } catch (e) {
+                                // console.warn('Failed to transfer to TrackPlayer', e);
+                            }
+                        }
+                    } else if (nextAppState === 'active') {
+                        try {
+                            const state = await TrackPlayer.getState?.();
+                            if (state === TrackPlayer.STATE_PLAYING || state === TrackPlayer.STATE_BUFFERING) {
+                                try {
+                                    await TrackPlayer.pause();
+                                } catch (e) {}
+                                const current = playlistRef.current[currentIndexRef.current];
+                                if (current) {
+                                    await loadAudio(currentIndexRef.current, playlistRef.current);
+                                }
+                            }
+                        } catch (e) {
+                            // ignore
+                        }
+                    }
+                } catch (e) {
+                    // TrackPlayer isn't installed — nothing to do
+                }
+            };
+
+            const sub = AppState.addEventListener ? AppState.addEventListener('change', handleAppState) : undefined;
+            // For older RN versions fallback
+            if (!sub) {
+                const listener = AppState.addEventListener('change', handleAppState as any);
+                return () => listener.remove();
+            }
+
+            return () => {
+                if (sub && typeof (sub as any).remove === 'function') (sub as any).remove();
+                mounted = false;
+            };
+        }, [isPlaying]);
 
     if (loading) {
         return (
@@ -201,18 +294,14 @@ export default function MusicPlayer() {
                     <TouchableOpacity onPress={() => navigation.goBack()}>
                         <Ionicons name="arrow-back" size={24} color="white" />
                     </TouchableOpacity>
-                    <Text style={musicStyles.title} numberOfLines={1}
-                        ellipsizeMode="tail">
+                    <Text style={musicStyles.title} numberOfLines={1} ellipsizeMode="tail">
                         {currentSong?.title_short || 'Music Player'}
                     </Text>
                     <Ionicons name="heart-outline" size={24} color="white" />
                 </View>
 
                 {/* Album Art */}
-                <Image
-                    source={{ uri: currentSong?.album?.cover_big }}
-                    style={musicStyles.albumArt}
-                />
+                <Image source={{ uri: currentSong?.album?.cover_big }} style={musicStyles.albumArt} />
 
                 {/* Song Info */}
                 <Text style={musicStyles.songTitle}>{currentSong?.title}</Text>
@@ -243,11 +332,7 @@ export default function MusicPlayer() {
                     </TouchableOpacity>
                     <TouchableOpacity onPress={togglePlayPause}>
                         <View style={musicStyles.playButton}>
-                            <Ionicons
-                                name={isPlaying ? 'pause' : 'play'}
-                                size={32}
-                                color="white"
-                            />
+                            <Ionicons name={isPlaying ? 'pause' : 'play'} size={32} color="white" />
                         </View>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={playNext}>
