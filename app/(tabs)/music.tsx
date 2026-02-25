@@ -16,6 +16,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { addFavorite, removeFavorite, isFavorite } from '../utils/favorites';
 
 export default function MusicPlayer() {
     const [sound, setSound] = useState<Audio.Sound | null>(null);
@@ -31,6 +32,7 @@ export default function MusicPlayer() {
 
     const soundRef = useRef<Audio.Sound | null>(null);
     const finishRef = useRef<boolean>(false);
+    const [isFav, setIsFav] = useState<boolean>(false);
     const playlistRef = useRef<any[]>([]);
     const currentIndexRef = useRef<number>(0);
     const navigation = useNavigation();
@@ -42,6 +44,28 @@ export default function MusicPlayer() {
     useEffect(() => {
         currentIndexRef.current = currentIndex;
     }, [currentIndex]);
+
+        // Update favorite flag when current song changes
+        useEffect(() => {
+            let mounted = true;
+            const check = async () => {
+                const current = playlistRef.current[currentIndexRef.current];
+                if (!current) {
+                    if (mounted) setIsFav(false);
+                    return;
+                }
+                try {
+                    const fav = await isFavorite(current.id);
+                    if (mounted) setIsFav(!!fav);
+                } catch (e) {
+                    if (mounted) setIsFav(false);
+                }
+            };
+            check();
+            return () => {
+                mounted = false;
+            };
+        }, [currentIndex, playlist]);
 
     // Fetch Deezer API (top 20 songs)
     const fetchDeezerSongs = async (query: string = 'Coke Studio') => {
@@ -122,6 +146,23 @@ export default function MusicPlayer() {
             await soundRef.current.playAsync();
         }
     };
+
+        // Toggle favorite for current song
+        const toggleFavorite = async () => {
+            const current = playlistRef.current[currentIndexRef.current];
+            if (!current) return;
+            try {
+                if (isFav) {
+                    await removeFavorite(current.id);
+                    setIsFav(false);
+                } else {
+                    await addFavorite(current);
+                    setIsFav(true);
+                }
+            } catch (e) {
+                // ignore
+            }
+        };
 
     // Next / Previous control
     const playNext = () => {
@@ -297,7 +338,9 @@ export default function MusicPlayer() {
                     <Text style={musicStyles.title} numberOfLines={1} ellipsizeMode="tail">
                         {currentSong?.title_short || 'Music Player'}
                     </Text>
-                    <Ionicons name="heart-outline" size={24} color="white" />
+                    <TouchableOpacity onPress={toggleFavorite} style={{ padding: 6 }}>
+                        <Ionicons name={isFav ? 'heart' : 'heart-outline'} size={22} color={isFav ? '#ff6b6b' : 'white'} />
+                    </TouchableOpacity>
                 </View>
 
                 {/* Album Art */}
