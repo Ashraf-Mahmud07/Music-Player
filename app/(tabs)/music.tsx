@@ -5,7 +5,7 @@ import Slider from '@react-native-community/slider';
 import { Audio, AVPlaybackStatus } from 'expo-av';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     AppState,
     AppStateStatus,
@@ -16,7 +16,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { addFavorite, removeFavorite, isFavorite } from '../utils/favorites';
+import { addFavorite, isFavorite, removeFavorite } from '../utils/favorites';
 
 export default function MusicPlayer() {
     const [sound, setSound] = useState<Audio.Sound | null>(null);
