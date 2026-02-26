@@ -2,12 +2,12 @@
 // You can find these in the Firebase console -> Project settings -> General -> Your apps (Web app) -> SDK config
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyAhA_A2EICxANtLOo2GQdY8akj-Ehf5i2s",
+  authDomain: "baulbox-50461.firebaseapp.com",
+  projectId: "baulbox-50461",
+  storageBucket: "baulbox-50461.appspot.com",
+  messagingSenderId: "899958961056",
+  appId: "1:899958961056:android:ea2c9eb910421ab8636ac5",
   // Optional: measurementId
   // measurementId: "G-XXXXXXXX",
 };

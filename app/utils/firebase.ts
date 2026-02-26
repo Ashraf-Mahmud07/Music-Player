@@ -84,9 +84,18 @@ export async function uploadProfilePhoto(file: { uri: string; name?: string }) {
 }
 
 // Google sign-in helper using expo-auth-session: you will need to install and configure expo-auth-session and provide webClientId
-export async function signInWithGoogle(idToken: string) {
-  // idToken comes from Google sign-in flow (expo-auth-session)
-  const credential = GoogleAuthProvider.credential(idToken);
+// Accept either idToken and/or accessToken from the Google auth flow.
+// expo-auth-session returns both in response.authentication when available.
+export async function signInWithGoogle(
+  idToken?: string | null,
+  accessToken?: string | null,
+) {
+  if (!idToken && !accessToken)
+    throw new Error("Missing Google idToken and accessToken");
+  const credential = GoogleAuthProvider.credential(
+    idToken || undefined,
+    accessToken || undefined,
+  );
   return signInWithCredential(auth, credential);
 }
 

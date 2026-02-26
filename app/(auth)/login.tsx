@@ -1,10 +1,12 @@
 import * as Google from 'expo-auth-session/providers/google';
 import Constants from 'expo-constants';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Image,
     KeyboardAvoidingView,
     Platform,
     Pressable,
@@ -14,6 +16,7 @@ import {
     TextInput,
     View
 } from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 import { signInWithEmail, signInWithGoogle } from '../utils/firebase';
 
 export default function Login() {
@@ -48,32 +51,46 @@ export default function Login() {
   return (
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView behavior={Platform.select({ ios: 'padding', android: undefined })} style={styles.container}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Welcome back</Text>
+        <View style={styles.headerBox}>
+          <LinearGradient colors={["#6D28D9", "#4F46E5"]} style={styles.logoCircle}>
+            <Image source={require('../../assets/images/favicon.png')} style={styles.logo} />
+          </LinearGradient>
+          <Text style={styles.welcome}>Welcome back</Text>
+          <Text style={styles.subtitle}>Sign in to continue to Music Player</Text>
+        </View>
 
+        <View style={styles.card}>
           {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <TextInput
-            placeholder="Email"
-            placeholderTextColor="#666"
-            value={email}
-            onChangeText={setEmail}
-            style={styles.input}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
+          <View style={styles.inputRow}>
+            <Icon name="mail-outline" size={18} color="#666" style={styles.inputIcon} />
+            <TextInput
+              placeholder="Email"
+              placeholderTextColor="#666"
+              value={email}
+              onChangeText={setEmail}
+              style={styles.input}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
 
-          <TextInput
-            placeholder="Password"
-            placeholderTextColor="#666"
-            value={password}
-            onChangeText={setPassword}
-            style={styles.input}
-            secureTextEntry
-          />
+          <View style={styles.inputRow}>
+            <Icon name="lock-closed-outline" size={18} color="#666" style={styles.inputIcon} />
+            <TextInput
+              placeholder="Password"
+              placeholderTextColor="#666"
+              value={password}
+              onChangeText={setPassword}
+              style={styles.input}
+              secureTextEntry
+            />
+          </View>
 
-          <Pressable style={styles.primaryButton} onPress={onLogin} disabled={loading} accessibilityRole="button">
-            {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Login</Text>}
+          <Pressable onPress={onLogin} disabled={loading} accessibilityRole="button">
+            <LinearGradient colors={["#6D28D9", "#4F46E5"]} style={styles.primaryButton}>
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Login</Text>}
+            </LinearGradient>
           </Pressable>
 
           <Pressable style={styles.ghostButton} onPress={() => router.push('./signup')} accessibilityRole="button">
@@ -96,7 +113,7 @@ export default function Login() {
             />
           ) : (
             <Pressable
-              style={[styles.googleButton, { opacity: 0.7 }]}
+              style={[styles.googleButton, { opacity: 0.9 }]}
               onPress={() =>
                 Alert.alert(
                   'Google sign-in not configured',
@@ -117,7 +134,14 @@ export default function Login() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#0A043C' },
   container: { flex: 1, padding: 16, justifyContent: 'center' },
+  headerBox: { alignItems: 'center', marginBottom: 18 },
+  logoCircle: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
+  logo: { width: 40, height: 40, resizeMode: 'contain' },
+  welcome: { color: '#fff', fontSize: 20, fontWeight: '700' },
+  subtitle: { color: '#9BA3AF', fontSize: 13, marginTop: 6 },
   card: { backgroundColor: '#071039', borderRadius: 12, padding: 20, shadowColor: '#000', shadowOpacity: 0.2 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 8, marginBottom: 10, paddingHorizontal: 10 },
+  inputIcon: { marginRight: 8 },
   title: { color: '#fff', fontSize: 20, fontWeight: '700', marginBottom: 12 },
   input: { backgroundColor: '#fff', padding: 12, borderRadius: 8, marginBottom: 10 },
   primaryButton: { backgroundColor: '#4F46E5', padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 6 },
@@ -143,11 +167,12 @@ function GoogleSignInButton({ clientIds, onStart, onFinish, onError }: any) {
   useEffect(() => {
     if (response?.type === 'success') {
       const idToken = response.authentication?.idToken;
-      if (idToken) {
+      const accessToken = response.authentication?.accessToken;
+      if (idToken || accessToken) {
         (async () => {
           try {
             onStart?.();
-            await signInWithGoogle(idToken);
+            await signInWithGoogle(idToken ?? null, accessToken ?? null);
             router.replace('/');
           } catch (e: any) {
             onError?.(e?.message || String(e));

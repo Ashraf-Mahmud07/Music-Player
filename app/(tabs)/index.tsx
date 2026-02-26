@@ -14,6 +14,7 @@ import {
     View,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { getCurrentUser } from '../utils/firebase';
 
 export default function HomeScreen() {
     const [query, setQuery] = useState('');
@@ -66,6 +67,9 @@ export default function HomeScreen() {
         });
     };
 
+    // Current user (may be null). We read synchronously here — auth updates will require a listener if you need realtime updates.
+    const user = getCurrentUser();
+
     return (
         <LinearGradient colors={['#0A043C', '#111132']} style={homeStyles.container}>
             <ScrollView
@@ -76,18 +80,35 @@ export default function HomeScreen() {
             >
                 {/* Header */}
                 <View style={homeStyles.header}>
-                    <TouchableOpacity
-                        style={homeStyles.profile}
-                        onPress={() => router.push('/profile')}
-                        accessibilityRole="button"
-                        accessibilityLabel="Open profile"
-                    >
-                        <Image source={require('@/assets/images/singer.jpg')} style={homeStyles.avatar} />
-                        <View>
-                            <Text style={homeStyles.name}>Ashraf Mahmud</Text>
-                            <Text style={homeStyles.role}>Diamond Member</Text>
-                        </View>
-                    </TouchableOpacity>
+                    {user ? (
+                        <TouchableOpacity
+                            style={homeStyles.profile}
+                            onPress={() => router.push('/profile')}
+                            accessibilityRole="button"
+                            accessibilityLabel="Open profile"
+                        >
+                            <Image source={require('@/assets/images/singer.jpg')} style={homeStyles.avatar} />
+                            <View>
+                                <Text style={homeStyles.name}>{user.displayName || user.email}</Text>
+                                <Text style={homeStyles.role}>Diamond Member</Text>
+                            </View>
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity
+                            style={homeStyles.profile}
+                            onPress={() => router.push('/login')}
+                            accessibilityRole="button"
+                            accessibilityLabel="Login"
+                        >
+                            <View style={[homeStyles.avatar, { backgroundColor: '#2a2750', alignItems: 'center', justifyContent: 'center' }]}>
+                                <Icon name="person-add" size={22} color="#fff" />
+                            </View>
+                            <View>
+                                <Text style={homeStyles.name}>Sign in</Text>
+                                <Text style={homeStyles.role}>Welcome</Text>
+                            </View>
+                        </TouchableOpacity>
+                    )}
                     <Icon name="notifications-outline" size={24} color="#9BA3AF" />
                 </View>
 
