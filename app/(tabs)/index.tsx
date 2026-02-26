@@ -1,7 +1,7 @@
 import { homeStyles } from '@/components/styles/homeStyles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
@@ -76,13 +76,18 @@ export default function HomeScreen() {
             >
                 {/* Header */}
                 <View style={homeStyles.header}>
-                    <View style={homeStyles.profile}>
+                    <TouchableOpacity
+                        style={homeStyles.profile}
+                        onPress={() => router.push('/profile')}
+                        accessibilityRole="button"
+                        accessibilityLabel="Open profile"
+                    >
                         <Image source={require('@/assets/images/singer.jpg')} style={homeStyles.avatar} />
                         <View>
                             <Text style={homeStyles.name}>Ashraf Mahmud</Text>
                             <Text style={homeStyles.role}>Diamond Member</Text>
                         </View>
-                    </View>
+                    </TouchableOpacity>
                     <Icon name="notifications-outline" size={24} color="#9BA3AF" />
                 </View>
 

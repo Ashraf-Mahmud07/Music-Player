@@ -2,7 +2,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -65,6 +65,11 @@ export default function RootLayout() {
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          {/* Explicitly register auth/profile screens so they can be navigated to from within grouped routes.
+        Hide the root header for these so the custom auth layout header is the only visible header. */}
+          <Stack.Screen name="profile" options={{ headerShown: false }} />
+          <Stack.Screen name="login" options={{ headerShown: false }} />
+          <Stack.Screen name="signup" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />
       </SafeAreaView>
